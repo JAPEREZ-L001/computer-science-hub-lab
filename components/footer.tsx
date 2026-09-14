@@ -49,7 +49,15 @@ export function Footer() {
 
         <div className="mt-16 flex flex-col items-start justify-between gap-6 border-t border-white/[0.06] pt-8 md:flex-row md:items-center">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">
-            © {new Date().getFullYear()} Computer Science Hub. All rights reserved.
+            <a
+              href="https://phaser.io/agent/play/RVP3JP2og6z"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-inherit no-underline"
+            >
+              ©
+            </a>{" "}
+            {new Date().getFullYear()} Computer Science Hub. All rights reserved.
           </p>
           <nav
             aria-label="Enlaces legales y de contacto"
