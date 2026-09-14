@@ -1,4 +1,5 @@
 import { DISPLAY_NAME_FALLBACK, resolveDisplayName } from '@/src/lib/display-name'
+import { FORUM_PAGE_SIZE } from '@/src/lib/forum-constants'
 import { createClient } from '@/src/lib/supabase/server'
 import type { IdeaCategory, IdeaImpact } from '@/src/types'
 
@@ -353,6 +354,74 @@ export async function fetchMentorProfileForUser(userId: string): Promise<MentorO
     bio_short: data.bio_short as string | null,
     active: Boolean(data.active),
   }
+}
+
+export type ForumChannelRow = {
+  id: string
+  slug: string
+  name: string
+  description: string | null
+}
+
+export type ForumMessageRow = {
+  id: string
+  channel_id: string
+  author_id: string | null
+  author_name: string | null
+  content: string
+  created_at: string
+}
+
+export async function fetchForumChannels(): Promise<ForumChannelRow[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('forum_channels')
+    .select('id, slug, name, description')
+    .order('sort_order', { ascending: true })
+    .limit(50)
+
+  if (error) {
+    console.error('fetchForumChannels', error)
+    return []
+  }
+  return (data ?? []) as ForumChannelRow[]
+}
+
+/**
+ * Trae la pagina mas reciente de un canal (o la anterior a `before`), en
+ * orden descendente (mas nuevo primero) -- el llamador decide el orden de
+ * presentacion. Resuelve nombres de autor en la misma consulta.
+ */
+export async function fetchForumMessages(
+  channelId: string,
+  before?: string,
+): Promise<ForumMessageRow[]> {
+  const supabase = await createClient()
+  let query = supabase
+    .from('forum_messages')
+    .select('id, channel_id, author_id, content, created_at')
+    .eq('channel_id', channelId)
+    .order('created_at', { ascending: false })
+    .limit(FORUM_PAGE_SIZE)
+
+  if (before) {
+    query = query.lt('created_at', before)
+  }
+
+  const { data, error } = await query
+  if (error) {
+    console.error('fetchForumMessages', error)
+    return []
+  }
+
+  const rows = (data ?? []) as Omit<ForumMessageRow, 'author_name'>[]
+  const authorIds = rows.map((r) => r.author_id).filter((id): id is string => Boolean(id))
+  const nameById = await fetchDisplayNamesByUserId(supabase, [...new Set(authorIds)])
+
+  return rows.map((r) => ({
+    ...r,
+    author_name: r.author_id ? (nameById.get(r.author_id) ?? DISPLAY_NAME_FALLBACK) : null,
+  }))
 }
 
 export async function fetchMentorDirectory(): Promise<MentorProfileRow[]> {
