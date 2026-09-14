@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 
 import { createClient } from '@/src/lib/supabase/server'
+import { checkRateLimit } from '@/src/lib/rate-limiter'
 import { isValidUUID } from '@/src/lib/url-validation'
 import {
   IDEA_CATEGORIES,
@@ -198,5 +199,49 @@ export async function saveMentorMatchingProfile(form: {
 
   revalidatePath('/comunidad/mentores')
   revalidatePath('/comunidad/tutorias')
+  return { ok: true as const }
+}
+
+const FORUM_MESSAGE_RATE_LIMIT = 20 // mensajes por hora por usuario
+const FORUM_MESSAGE_MAX_LENGTH = 2000
+
+/**
+ * No hace `revalidatePath`: el mensaje aparece via la suscripcion de
+ * Realtime del propio ForumBoard, no por un refresh de la pagina. Eso es
+ * justamente lo que evita la latencia de un round-trip servidor-cliente
+ * completo por cada mensaje.
+ */
+export async function sendForumMessage(channelId: string, content: string) {
+  const ctx = await requireUser()
+  if (!ctx.ok || !ctx.user || !ctx.supabase) return { ok: false as const, message: ctx.message }
+
+  if (!isValidUUID(channelId)) {
+    return { ok: false as const, message: 'Canal inválido.' }
+  }
+
+  const trimmed = content.trim()
+  if (!trimmed) {
+    return { ok: false as const, message: 'Escribí algo antes de enviar.' }
+  }
+  if (trimmed.length > FORUM_MESSAGE_MAX_LENGTH) {
+    return { ok: false as const, message: `El mensaje es demasiado largo (máximo ${FORUM_MESSAGE_MAX_LENGTH} caracteres).` }
+  }
+
+  const rl = checkRateLimit(`forum:${ctx.user.id}`, FORUM_MESSAGE_RATE_LIMIT)
+  if (!rl.allowed) {
+    return { ok: false as const, message: 'Estás enviando mensajes muy rápido. Esperá un momento e intentá de nuevo.' }
+  }
+
+  const { error } = await ctx.supabase.from('forum_messages').insert({
+    channel_id: channelId,
+    author_id: ctx.user.id,
+    content: trimmed,
+  })
+
+  if (error) {
+    console.error('sendForumMessage', error)
+    return { ok: false as const, message: GENERIC_DB_ERROR }
+  }
+
   return { ok: true as const }
 }

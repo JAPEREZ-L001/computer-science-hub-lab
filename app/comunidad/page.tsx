@@ -8,6 +8,7 @@ import {
   Mic,
   FlaskConical,
   Trophy,
+  MessagesSquare,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -18,6 +19,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ComunidadModuleCard } from '@/components/comunidad/comunidad-module-card'
 
 const secondaryModules = [
+  {
+    href: '/comunidad/foro',
+    title: 'Foro',
+    description: 'Charla en tiempo real con la comunidad del Hub. Cualquiera puede leer, escribir requiere cuenta.',
+    preview: 'Mensajes en vivo, sin recargar. Leer es libre, escribir pide cuenta real.',
+    icon: MessagesSquare,
+    requiresAuth: false,
+  },
   {
     href: '/comunidad/ideas',
     title: 'Ideas',
