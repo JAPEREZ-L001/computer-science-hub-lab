@@ -1,0 +1,15 @@
+# Commit message template CSH
+# <tipo>(<scope>): <descripción imperativa, máx 72 chars>
+#
+# Tipos: feat fix chore docs refactor style test ci db perf
+# Scopes: auth forum feedback survey profile events admin ui db ci docs
+#         realtime messages posts badges universities
+#
+# Ejemplos:
+#   feat(feedback): habilitar envío anónimo con rate limiting
+#   fix(survey): corregir guard que bloqueaba usuarios anónimos
+#   db(badges): migración para badge y university_role en profiles
+#
+# [Cuerpo opcional — explica el QUÉ y el POR QUÉ]
+#
+# Refs: CSH-S0-XXX

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Restablecé tu contraseña</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:#f4f4f5; font-family:Arial, Helvetica, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5; padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px; background-color:#ffffff; border-radius:12px; overflow:hidden; border:1px solid #e4e4e7;">
+            <tr>
+              <td style="padding:32px 32px 8px 32px; text-align:center;">
+                <p style="margin:0; font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#71717a;">
+                  Computer Science Hub
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 32px 0 32px;">
+                <h1 style="margin:0 0 16px 0; font-size:20px; line-height:1.4; color:#18181b;">
+                  Restablecé tu contraseña
+                </h1>
+                <p style="margin:0 0 24px 0; font-size:14px; line-height:1.6; color:#3f3f46;">
+                  Recibimos una solicitud para crear una contraseña nueva en tu cuenta del Hub
+                  (<strong>{{ .Email }}</strong>). Si fuiste vos, hacé clic en el botón para continuar.
+                  El enlace vence en una hora.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 32px 24px 32px; text-align:center;">
+                <a
+                  href="{{ .ConfirmationURL }}"
+                  style="display:inline-block; background-color:#18181b; color:#ffffff; text-decoration:none; font-size:13px; font-weight:700; letter-spacing:1px; text-transform:uppercase; padding:14px 32px; border-radius:999px;"
+                >
+                  Crear nueva contraseña
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 32px 24px 32px;">
+                <p style="margin:0 0 8px 0; font-size:12px; line-height:1.6; color:#71717a;">
+                  Si el botón no funciona, copiá y pegá este enlace en tu navegador:
+                </p>
+                <p style="margin:0; font-size:12px; line-height:1.6; word-break:break-all;">
+                  <a href="{{ .ConfirmationURL }}" style="color:#2563eb;">{{ .ConfirmationURL }}</a>
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 32px 32px 32px; border-top:1px solid #e4e4e7;">
+                <p style="margin:0; font-size:12px; line-height:1.6; color:#a1a1aa;">
+                  Si no pediste este cambio, ignorá este correo: tu contraseña actual sigue
+                  siendo válida y no se realizó ningún cambio en tu cuenta.
+                </p>
+              </td>
+            </tr>
+          </table>
+          <p style="margin:16px 0 0 0; font-size:11px; color:#a1a1aa;">
+            Computer Science Hub · cshdevs.org
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

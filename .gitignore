@@ -1,0 +1,60 @@
+# v0 sandbox internal files
+__v0_runtime_loader.js
+__v0_devtools.tsx
+__v0_jsx-dev-runtime.ts
+.npmrc
+.snowflake/
+.v0-trash/
+.vercel/
+next.user-config.*
+
+# Environment variables
+.env
+.env*.local
+
+# Common ignores
+node_modules/
+.next/
+.DS_Store
+.vercel
+
+# Supabase CLI (credenciales de enlace locales)
+supabase/.temp/
+
+# Config local de MCP (Claude Code) y skills externos
+.mcp.json
+resources/
+
+# Temporary files
+tmp-*.txt
+tmp_*.txt
+*.log
+tsconfig.tsbuildinfo
+
+# Operational scripts (not application code)
+*.ps1
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# TestSprite (credenciales locales, API key y proxy con secretos embebidos)
+testsprite_tests/tmp/
+
+
+# --- computer-science-hub-lab: documentación interna que vive solo en el repo privado ---
+# Este repo es público. Estas rutas existen en Computer-Science-Hub-Web (privado)
+# y no deben llegar acá: bitácoras de sesión, auditorías e informes internos.
+docs/_archive/
+docs/research/
+docs/work/*
+!docs/work/.gitkeep
+testsprite_tests/
+security_audit_report.md
+# Documentos de estado interno del proyecto. Viven solo en el repo privado.
+docs/BACKLOG.md
+docs/STATUS.md
+docs/CHANGELOG.md
+/CHANGELOG.md
