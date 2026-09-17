@@ -363,6 +363,10 @@ export type TutoringRequestAdminRow = {
   status: string
   assigned_mentor_id: string | null
   assigned_mentor_name: string | null
+  session_location: string | null
+  session_at: string | null
+  mentor_notes: string | null
+  reinforcement_topics: string | null
   created_at: string
 }
 
@@ -375,7 +379,9 @@ export async function adminListTutoringRequests(): Promise<TutoringRequestAdminR
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('tutoring_requests')
-    .select('id, user_id, topic, details, preferred_schedule, status, assigned_mentor_id, created_at')
+    .select(
+      'id, user_id, topic, details, preferred_schedule, status, assigned_mentor_id, session_location, session_at, mentor_notes, reinforcement_topics, created_at',
+    )
     .order('created_at', { ascending: false })
 
   if (error) {

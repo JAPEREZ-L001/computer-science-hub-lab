@@ -11,6 +11,10 @@ import {
   type IdeaCategory,
   type IdeaImpact,
 } from '@/src/types'
+import {
+  updateMentorSessionSchema,
+  updateReinforcementTopicsSchema,
+} from '@/src/lib/schemas/tutoring'
 
 const GENERIC_DB_ERROR = 'Ocurrió un error. Intentá de nuevo más tarde.'
 
@@ -46,6 +50,77 @@ export async function submitTutoringRequest(form: {
 
   if (error) {
     console.error('submitTutoringRequest', error)
+    return { ok: false as const, message: GENERIC_DB_ERROR }
+  }
+
+  revalidatePath('/comunidad/tutorias')
+  return { ok: true as const }
+}
+
+/**
+ * El alumno edita los temas que quiere reforzar, incluso después del match: es
+ * justo cuando ya sabe con quién va y puede afinar el pedido.
+ *
+ * El `.eq('user_id')` es redundante con la RLS y con el trigger
+ * `tutoring_requests_guard_columns`; se deja porque hace explícito el alcance
+ * en el mismo lugar donde se lee el código.
+ */
+export async function updateReinforcementTopics(form: {
+  id: string
+  reinforcement_topics: string
+}) {
+  const ctx = await requireUser()
+  if (!ctx.ok || !ctx.user || !ctx.supabase) return { ok: false as const, message: ctx.message }
+
+  const parsed = updateReinforcementTopicsSchema.safeParse(form)
+  if (!parsed.success) {
+    return { ok: false as const, message: parsed.error.issues[0]?.message ?? GENERIC_DB_ERROR }
+  }
+
+  const { error } = await ctx.supabase
+    .from('tutoring_requests')
+    .update({ reinforcement_topics: parsed.data.reinforcement_topics || null })
+    .eq('id', parsed.data.id)
+    .eq('user_id', ctx.user.id)
+
+  if (error) {
+    console.error('updateReinforcementTopics', error)
+    return { ok: false as const, message: GENERIC_DB_ERROR }
+  }
+
+  revalidatePath('/comunidad/tutorias')
+  return { ok: true as const }
+}
+
+/** El mentor agenda la sesión (aula y horario) y deja el seguimiento. */
+export async function updateMentorSession(form: {
+  id: string
+  session_location: string
+  session_at: string
+  mentor_notes: string
+  status: string
+}) {
+  const ctx = await requireUser()
+  if (!ctx.ok || !ctx.user || !ctx.supabase) return { ok: false as const, message: ctx.message }
+
+  const parsed = updateMentorSessionSchema.safeParse(form)
+  if (!parsed.success) {
+    return { ok: false as const, message: parsed.error.issues[0]?.message ?? GENERIC_DB_ERROR }
+  }
+
+  const { error } = await ctx.supabase
+    .from('tutoring_requests')
+    .update({
+      session_location: parsed.data.session_location || null,
+      session_at: parsed.data.session_at || null,
+      mentor_notes: parsed.data.mentor_notes || null,
+      status: parsed.data.status,
+    })
+    .eq('id', parsed.data.id)
+    .eq('assigned_mentor_id', ctx.user.id)
+
+  if (error) {
+    console.error('updateMentorSession', error)
     return { ok: false as const, message: GENERIC_DB_ERROR }
   }
 

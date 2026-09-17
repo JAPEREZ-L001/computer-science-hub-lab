@@ -73,7 +73,24 @@ export type TutoringRequestRow = {
   preferred_schedule: string | null
   status: string
   created_at: string
+  /** Fijados por el mentor o el admin una vez emparejada la tutoría. */
+  session_location: string | null
+  session_at: string | null
+  mentor_notes: string | null
+  /** Lo escribe el alumno: qué quiere que se refuerce en la sesión. */
+  reinforcement_topics: string | null
+  assigned_mentor_id: string | null
+  /** Resuelto aparte: `assigned_mentor_id` apunta a `auth.users`, no a `profiles`. */
+  mentor_name: string | null
 }
+
+/** Una tutoría vista desde el lado del mentor: suma quién la pidió. */
+export type MentorTutoringRow = Omit<TutoringRequestRow, 'mentor_name'> & {
+  student_name: string
+}
+
+const TUTORING_COLUMNS =
+  'id, topic, details, preferred_schedule, status, created_at, session_location, session_at, mentor_notes, reinforcement_topics, assigned_mentor_id'
 
 export type MentorProfileRow = {
   user_id: string
@@ -316,7 +333,7 @@ export async function fetchTutoringRequestsForUser(userId: string): Promise<Tuto
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('tutoring_requests')
-    .select('id, topic, details, preferred_schedule, status, created_at')
+    .select(TUTORING_COLUMNS)
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(50)
@@ -325,7 +342,53 @@ export async function fetchTutoringRequestsForUser(userId: string): Promise<Tuto
     console.error('fetchTutoringRequestsForUser', error)
     return []
   }
-  return (data ?? []) as TutoringRequestRow[]
+
+  const rows = (data ?? []) as Omit<TutoringRequestRow, 'mentor_name'>[]
+  const nameById = await fetchDisplayNamesByUserId(
+    supabase,
+    [...new Set(rows.map((r) => r.assigned_mentor_id).filter((id): id is string => Boolean(id)))],
+  )
+
+  return rows.map((r) => ({
+    ...r,
+    mentor_name: r.assigned_mentor_id ? (nameById.get(r.assigned_mentor_id) ?? null) : null,
+  }))
+}
+
+/**
+ * Agenda del mentor: las solicitudes que le asignaron.
+ *
+ * Depende de que la policy de SELECT contemple `assigned_mentor_id` (se agregó
+ * en `20260917110418_tutoring_session_logistics.sql`); antes de esa migración
+ * esta consulta devolvía siempre vacío.
+ */
+export async function fetchTutoringRequestsForMentor(
+  mentorId: string,
+): Promise<MentorTutoringRow[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('tutoring_requests')
+    .select(`${TUTORING_COLUMNS}, user_id`)
+    .eq('assigned_mentor_id', mentorId)
+    .order('session_at', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  if (error) {
+    console.error('fetchTutoringRequestsForMentor', error)
+    return []
+  }
+
+  const rows = (data ?? []) as (Omit<TutoringRequestRow, 'mentor_name'> & { user_id: string })[]
+  const nameById = await fetchDisplayNamesByUserId(
+    supabase,
+    [...new Set(rows.map((r) => r.user_id))],
+  )
+
+  return rows.map(({ user_id, ...r }) => ({
+    ...r,
+    student_name: nameById.get(user_id) ?? DISPLAY_NAME_FALLBACK,
+  }))
 }
 
 export type MentorOwnProfileRow = {

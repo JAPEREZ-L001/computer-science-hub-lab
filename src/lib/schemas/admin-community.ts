@@ -59,4 +59,13 @@ export const updateTutoringSchema = z.object({
   status: z.enum(TUTORING_STATUSES),
   // '' significa "sin asignar" (assigned_mentor_id -> null).
   assigned_mentor_id: optionalUuid,
+  session_location: z.string().trim().max(200, 'Máximo 200 caracteres.').optional().default(''),
+  // <input type="datetime-local"> entrega '' o 'YYYY-MM-DDTHH:mm'.
+  session_at: z
+    .string()
+    .trim()
+    .regex(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})?$/, 'Fecha y hora inválidas.')
+    .optional()
+    .default(''),
+  mentor_notes: z.string().trim().max(2000, 'Máximo 2000 caracteres.').optional().default(''),
 })

@@ -6,10 +6,13 @@ import { Pencil } from 'lucide-react'
 
 import type { MentorCandidateRow, TutoringRequestAdminRow } from '@/src/lib/supabase/admin-queries'
 import { updateTutoringRequest } from '@/app/admin/actions/tutoring'
+import { formatSessionDate, toDateTimeLocalValue } from '@/src/lib/tutoring-display'
 import { useToast } from '@/components/ui/use-toast'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
   DialogContent,
@@ -48,6 +51,9 @@ type FormState = {
   id: string
   status: string
   assigned_mentor_id: string
+  session_location: string
+  session_at: string
+  mentor_notes: string
 }
 
 export function TutoringAdminPanel({
@@ -62,13 +68,19 @@ export function TutoringAdminPanel({
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState(false)
   const [form, setForm] = useState<FormState | null>(null)
+  // Solo lectura en el panel: lo escribe el alumno desde /comunidad/tutorias.
+  const [reinforcementTopics, setReinforcementTopics] = useState<string | null>(null)
 
   const openEdit = (row: TutoringRequestAdminRow) => {
     setForm({
       id: row.id,
       status: row.status,
       assigned_mentor_id: row.assigned_mentor_id ?? UNASSIGNED,
+      session_location: row.session_location ?? '',
+      session_at: toDateTimeLocalValue(row.session_at),
+      mentor_notes: row.mentor_notes ?? '',
     })
+    setReinforcementTopics(row.reinforcement_topics)
     setOpen(true)
   }
 
@@ -77,8 +89,7 @@ export function TutoringAdminPanel({
     if (!form) return
     setPending(true)
     const res = await updateTutoringRequest({
-      id: form.id,
-      status: form.status,
+      ...form,
       assigned_mentor_id: form.assigned_mentor_id === UNASSIGNED ? '' : form.assigned_mentor_id,
     })
     setPending(false)
@@ -90,6 +101,9 @@ export function TutoringAdminPanel({
     setOpen(false)
     router.refresh()
   }
+
+  const setField = (key: keyof FormState, value: string) =>
+    setForm((f) => (f ? { ...f, [key]: value } : f))
 
   return (
     <div className="space-y-6">
@@ -106,13 +120,14 @@ export function TutoringAdminPanel({
               <TableHead className="text-zinc-300">Tema</TableHead>
               <TableHead className="text-zinc-300">Estado</TableHead>
               <TableHead className="text-zinc-300">Mentor asignado</TableHead>
+              <TableHead className="text-zinc-300">Sesión</TableHead>
               <TableHead className="w-[80px] text-right text-zinc-300">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {initialRows.length === 0 ? (
               <TableRow className="border-white/10">
-                <TableCell colSpan={5} className="text-center text-zinc-500">
+                <TableCell colSpan={6} className="text-center text-zinc-500">
                   No hay solicitudes de tutoría.
                 </TableCell>
               </TableRow>
@@ -129,6 +144,20 @@ export function TutoringAdminPanel({
                     </Badge>
                   </TableCell>
                   <TableCell className="text-zinc-400">{row.assigned_mentor_name ?? '—'}</TableCell>
+                  <TableCell className="max-w-[200px] text-xs text-zinc-400">
+                    {row.session_at || row.session_location ? (
+                      <>
+                        <span className="block truncate">
+                          {formatSessionDate(row.session_at) ?? 'Sin fecha'}
+                        </span>
+                        <span className="block truncate text-zinc-500">
+                          {row.session_location ?? 'Sin aula'}
+                        </span>
+                      </>
+                    ) : (
+                      '—'
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button
                       type="button"
@@ -157,10 +186,7 @@ export function TutoringAdminPanel({
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label>Estado</Label>
-                  <Select
-                    value={form.status}
-                    onValueChange={(v) => setForm((f) => (f ? { ...f, status: v } : f))}
-                  >
+                  <Select value={form.status} onValueChange={(v) => setField('status', v)}>
                     <SelectTrigger className="border-white/10 bg-white/5">
                       <SelectValue />
                     </SelectTrigger>
@@ -175,7 +201,7 @@ export function TutoringAdminPanel({
                   <Label>Mentor asignado</Label>
                   <Select
                     value={form.assigned_mentor_id}
-                    onValueChange={(v) => setForm((f) => (f ? { ...f, assigned_mentor_id: v } : f))}
+                    onValueChange={(v) => setField('assigned_mentor_id', v)}
                   >
                     <SelectTrigger className="border-white/10 bg-white/5">
                       <SelectValue />
@@ -194,6 +220,57 @@ export function TutoringAdminPanel({
                       No hay mentores activos en el directorio todavía.
                     </p>
                   ) : null}
+                </div>
+
+                <div className="mt-2 border-t border-white/10 pt-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                    Sesión
+                  </p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    El alumno y el mentor ven esto en /comunidad/tutorias.
+                  </p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="tut-loc">Aula o lugar</Label>
+                    <Input
+                      id="tut-loc"
+                      value={form.session_location}
+                      onChange={(e) => setField('session_location', e.target.value)}
+                      placeholder="Ej. Aula B-203, o enlace de Meet"
+                      className="border-white/10 bg-white/5"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="tut-at">Fecha y hora</Label>
+                    <Input
+                      id="tut-at"
+                      type="datetime-local"
+                      value={form.session_at}
+                      onChange={(e) => setField('session_at', e.target.value)}
+                      className="border-white/10 bg-white/5"
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="tut-notes">Seguimiento</Label>
+                  <Textarea
+                    id="tut-notes"
+                    value={form.mentor_notes}
+                    onChange={(e) => setField('mentor_notes', e.target.value)}
+                    rows={3}
+                    placeholder="Qué se cubrió, qué queda pendiente…"
+                    className="border-white/10 bg-white/5"
+                  />
+                </div>
+
+                <div className="rounded-md border border-white/10 bg-white/[0.03] p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                    Temas que pidió reforzar
+                  </p>
+                  <p className="mt-1.5 whitespace-pre-line text-sm text-zinc-300">
+                    {reinforcementTopics || 'El alumno todavía no especificó temas.'}
+                  </p>
                 </div>
               </div>
               <DialogFooter>

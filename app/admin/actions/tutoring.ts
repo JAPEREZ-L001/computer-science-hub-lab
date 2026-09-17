@@ -17,6 +17,9 @@ export async function updateTutoringRequest(form: {
   id: string
   status: string
   assigned_mentor_id: string
+  session_location: string
+  session_at: string
+  mentor_notes: string
 }) {
   const ctx = await assertAdminAction()
   if (!ctx.ok) return { ok: false as const, message: ctx.message }
@@ -29,6 +32,9 @@ export async function updateTutoringRequest(form: {
   const row = {
     status: parsed.data.status,
     assigned_mentor_id: parsed.data.assigned_mentor_id || null,
+    session_location: parsed.data.session_location || null,
+    session_at: parsed.data.session_at || null,
+    mentor_notes: parsed.data.mentor_notes || null,
   }
 
   const { error } = await ctx.supabase
@@ -42,6 +48,7 @@ export async function updateTutoringRequest(form: {
   }
 
   revalidatePath('/admin/tutorias')
+  // El alumno y el mentor leen esta misma fila desde la vista pública.
   revalidatePath('/comunidad/tutorias')
   return { ok: true as const }
 }
