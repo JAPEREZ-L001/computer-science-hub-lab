@@ -1,13 +1,18 @@
 import Link from 'next/link'
 
 import { createClient } from '@/src/lib/supabase/server'
-import { fetchTutoringRequestsForUser } from '@/src/lib/supabase/community-queries'
+import {
+  fetchTutoringRequestsForMentor,
+  fetchTutoringRequestsForUser,
+} from '@/src/lib/supabase/community-queries'
 
 import { AuthRequiredBanner } from '@/components/auth-required-banner'
 import { ComunidadShell } from '@/components/comunidad/comunidad-shell'
 import { ComunidadTabsShell } from '@/components/comunidad/comunidad-tabs-shell'
 import { ContextualSuggestion } from '@/components/contextual-suggestion'
 import { TutoringRequestForm } from '@/components/comunidad/tutoring-request-form'
+import { TutoringMentorList } from '@/components/comunidad/tutoring-mentor-list'
+import { TutoringStudentList } from '@/components/comunidad/tutoring-student-list'
 import { Users } from 'lucide-react'
 
 export default async function TutoriasPage() {
@@ -17,7 +22,15 @@ export default async function TutoriasPage() {
   } = await supabase.auth.getUser()
 
   const authed = Boolean(user && !user.is_anonymous)
-  const requests = authed && user ? await fetchTutoringRequestsForUser(user.id) : []
+  // La agenda de mentor se pide siempre que haya sesión: quien no tiene
+  // tutorías asignadas recibe [] y no ve la sección.
+  const [requests, mentorRequests] =
+    authed && user
+      ? await Promise.all([
+          fetchTutoringRequestsForUser(user.id),
+          fetchTutoringRequestsForMentor(user.id),
+        ])
+      : [[], []]
 
   return (
     <ComunidadShell
@@ -78,27 +91,28 @@ export default async function TutoriasPage() {
           </div>
         </div>
 
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-white/40">Tus solicitudes</h2>
-          {!authed ? (
-            <p className="mt-3 text-sm text-white/35">—</p>
-          ) : requests.length === 0 ? (
-            <p className="mt-3 text-sm text-white/40">Todavía no enviaste solicitudes.</p>
-          ) : (
-            <ul className="mt-4 space-y-3">
-              {requests.map((r) => (
-                <li
-                  key={r.id}
-                  className="rounded-lg border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm"
-                >
-                  <p className="font-medium text-white">{r.topic}</p>
-                  <p className="mt-1 text-xs text-white/40">
-                    {r.status} · {new Date(r.created_at).toLocaleDateString('es-SV')}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
+        <div className="space-y-10">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-white/40">Tus solicitudes</h2>
+            {!authed ? (
+              <p className="mt-3 text-sm text-white/35">—</p>
+            ) : (
+              <TutoringStudentList requests={requests} />
+            )}
+          </div>
+
+          {/* Solo aparece si a esta persona le asignaron tutorías como mentor. */}
+          {mentorRequests.length > 0 ? (
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-white/40">
+                Tutorías que estás acompañando
+              </h2>
+              <p className="mt-1 text-xs text-white/35">
+                Fijá el aula y el horario para que tu alumno sepa dónde presentarse.
+              </p>
+              <TutoringMentorList requests={mentorRequests} />
+            </div>
+          ) : null}
         </div>
       </div>
       </ComunidadTabsShell>

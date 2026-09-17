@@ -10,6 +10,8 @@ import {
   BookOpen,
   HeartHandshake,
   Users,
+  Lightbulb,
+  GraduationCap,
   ExternalLink,
 } from 'lucide-react'
 
@@ -23,6 +25,8 @@ const links = [
   { href: '/admin/recursos', label: 'Recursos', icon: BookOpen },
   { href: '/admin/sponsors', label: 'Sponsors', icon: HeartHandshake },
   { href: '/admin/miembros', label: 'Miembros', icon: Users },
+  { href: '/admin/ideas', label: 'Ideas', icon: Lightbulb },
+  { href: '/admin/tutorias', label: 'Tutorías', icon: GraduationCap },
 ] as const
 
 export function AdminSidebar() {
