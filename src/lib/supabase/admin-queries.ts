@@ -474,7 +474,7 @@ export async function adminListMentorCandidates(): Promise<MentorCandidateRow[]>
 
 export async function adminCounts() {
   const supabase = await createClient()
-  const [news, events, opps, resources, sponsors, profiles, registrations] =
+  const [news, events, opps, resources, sponsors, profiles, registrations, ideas, tutoring] =
     await Promise.all([
       supabase.from('news').select('id', { count: 'exact', head: true }),
       supabase.from('events').select('id', { count: 'exact', head: true }),
@@ -483,6 +483,13 @@ export async function adminCounts() {
       supabase.from('sponsors').select('id', { count: 'exact', head: true }),
       supabase.from('profiles').select('id', { count: 'exact', head: true }),
       supabase.from('event_registrations').select('event_id', { count: 'exact', head: true }),
+      supabase.from('community_ideas').select('id', { count: 'exact', head: true }),
+      // Solo las que esperan acción: una tutoría cerrada ya no requiere gestión,
+      // y el resumen sirve para saber qué falta atender.
+      supabase
+        .from('tutoring_requests')
+        .select('id', { count: 'exact', head: true })
+        .neq('status', 'closed'),
     ])
   return {
     news: news.count ?? 0,
@@ -492,5 +499,7 @@ export async function adminCounts() {
     sponsors: sponsors.count ?? 0,
     profiles: profiles.count ?? 0,
     registrations: registrations.count ?? 0,
+    ideas: ideas.count ?? 0,
+    tutoring: tutoring.count ?? 0,
   }
 }

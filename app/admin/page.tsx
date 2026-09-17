@@ -7,6 +7,8 @@ import {
   HeartHandshake,
   Users,
   ClipboardList,
+  Lightbulb,
+  GraduationCap,
 } from 'lucide-react'
 
 import { adminCounts } from '@/src/lib/supabase/admin-queries'
@@ -20,6 +22,13 @@ const cards = [
   { key: 'resources' as const, label: 'Recursos', href: '/admin/recursos', icon: BookOpen },
   { key: 'sponsors' as const, label: 'Sponsors', href: '/admin/sponsors', icon: HeartHandshake },
   { key: 'profiles' as const, label: 'Miembros', href: '/admin/miembros', icon: Users },
+  { key: 'ideas' as const, label: 'Ideas', href: '/admin/ideas', icon: Lightbulb },
+  {
+    key: 'tutoring' as const,
+    label: 'Tutorías por atender',
+    href: '/admin/tutorias',
+    icon: GraduationCap,
+  },
   {
     key: 'registrations' as const,
     label: 'Inscripciones',
@@ -39,6 +48,8 @@ export default async function AdminDashboardPage() {
     sponsors: counts.sponsors,
     profiles: counts.profiles,
     registrations: counts.registrations,
+    ideas: counts.ideas,
+    tutoring: counts.tutoring,
   }
 
   return (
