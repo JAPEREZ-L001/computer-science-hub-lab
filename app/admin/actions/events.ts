@@ -7,9 +7,10 @@ import {
   adminListEventRegistrants,
   type EventRegistrantRow,
 } from '@/src/lib/supabase/admin-queries'
-import { isValidUUID, sanitizeOptionalUrl } from '@/src/lib/url-validation'
+import { sanitizeOptionalUrl } from '@/src/lib/url-validation'
+import { uuidSchema } from '@/src/lib/schemas/common'
+import { saveEventSchema } from '@/src/lib/schemas/events'
 
-const types = ['workshop', 'charla', 'hackathon', 'copa', 'networking', 'otro'] as const
 const GENERIC_DB_ERROR = 'Error al guardar. Intentá de nuevo.'
 
 export async function saveEvent(form: {
@@ -27,24 +28,24 @@ export async function saveEvent(form: {
   const ctx = await assertAdminAction()
   if (!ctx.ok) return { ok: false as const, message: ctx.message }
 
-  const type = types.includes(form.type as (typeof types)[number]) ? form.type : 'otro'
-  const row = {
-    title: form.title.trim(),
-    description: form.description.trim() || null,
-    event_date: form.event_date,
-    event_time: form.event_time.trim() || '09:00',
-    speaker: form.speaker.trim() || null,
-    type,
-    location: form.location.trim() || null,
-    registration_url: sanitizeOptionalUrl(form.registration_url),
-    published: form.published,
+  const parsed = saveEventSchema.safeParse(form)
+  if (!parsed.success) {
+    return { ok: false as const, message: parsed.error.issues[0]?.message ?? GENERIC_DB_ERROR }
   }
 
-  if (!row.title) return { ok: false as const, message: 'El título es obligatorio.' }
-  if (!row.event_date) return { ok: false as const, message: 'La fecha es obligatoria.' }
+  const row = {
+    title: parsed.data.title,
+    description: parsed.data.description.trim() || null,
+    event_date: parsed.data.event_date,
+    event_time: parsed.data.event_time.trim() || '09:00',
+    speaker: parsed.data.speaker.trim() || null,
+    type: parsed.data.type,
+    location: parsed.data.location.trim() || null,
+    registration_url: sanitizeOptionalUrl(parsed.data.registration_url),
+    published: parsed.data.published,
+  }
 
   if (form.id) {
-    if (!isValidUUID(form.id)) return { ok: false as const, message: 'ID inválido.' }
     const { error } = await ctx.supabase.from('events').update(row).eq('id', form.id)
     if (error) {
       console.error('saveEvent:update', error)
@@ -82,7 +83,7 @@ export async function listEventRegistrants(
 > {
   const ctx = await assertAdminAction()
   if (!ctx.ok) return { ok: false as const, message: ctx.message }
-  if (!isValidUUID(eventId)) return { ok: false as const, message: 'ID inválido.' }
+  if (!uuidSchema.safeParse(eventId).success) return { ok: false as const, message: 'ID inválido.' }
 
   return { ok: true as const, registrants: await adminListEventRegistrants(eventId) }
 }
@@ -90,7 +91,7 @@ export async function listEventRegistrants(
 export async function deleteEvent(id: string) {
   const ctx = await assertAdminAction()
   if (!ctx.ok) return { ok: false as const, message: ctx.message }
-  if (!isValidUUID(id)) return { ok: false as const, message: 'ID inválido.' }
+  if (!uuidSchema.safeParse(id).success) return { ok: false as const, message: 'ID inválido.' }
 
   const { error } = await ctx.supabase.from('events').delete().eq('id', id)
   if (error) {

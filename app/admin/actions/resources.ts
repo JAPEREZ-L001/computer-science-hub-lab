@@ -3,9 +3,10 @@
 import { revalidatePath } from 'next/cache'
 
 import { assertAdminAction } from '@/src/lib/supabase/admin-auth'
-import { isValidUUID, sanitizeOptionalUrl } from '@/src/lib/url-validation'
+import { sanitizeOptionalUrl } from '@/src/lib/url-validation'
+import { uuidSchema } from '@/src/lib/schemas/common'
+import { saveResourceSchema } from '@/src/lib/schemas/admin-catalog'
 
-const categories = ['computacion', 'diseño', 'profesional'] as const
 const GENERIC_DB_ERROR = 'Error al guardar. Intentá de nuevo.'
 
 function parseTags(raw: string): string[] {
@@ -27,25 +28,25 @@ export async function saveResource(form: {
   const ctx = await assertAdminAction()
   if (!ctx.ok) return { ok: false as const, message: ctx.message }
 
-  const category = categories.includes(form.category as (typeof categories)[number])
-    ? form.category
-    : 'computacion'
-  let tags = parseTags(form.tags)
+  const parsed = saveResourceSchema.safeParse(form)
+  if (!parsed.success) {
+    return { ok: false as const, message: parsed.error.issues[0]?.message ?? GENERIC_DB_ERROR }
+  }
+
+  let tags = parseTags(parsed.data.tags)
   if (tags.length === 0) tags = ['basico']
 
   const row = {
-    title: form.title.trim(),
-    description: form.description.trim() || null,
-    url: sanitizeOptionalUrl(form.url) ?? '#',
-    category,
+    title: parsed.data.title,
+    description: parsed.data.description.trim() || null,
+    url: sanitizeOptionalUrl(parsed.data.url) ?? '#',
+    category: parsed.data.category,
     tags,
-    published: form.published,
+    published: parsed.data.published,
   }
 
-  if (!row.title) return { ok: false as const, message: 'El título es obligatorio.' }
-
   if (form.id) {
-    if (!isValidUUID(form.id)) return { ok: false as const, message: 'ID inválido.' }
+    if (!uuidSchema.safeParse(form.id).success) return { ok: false as const, message: 'ID inválido.' }
     const { error } = await ctx.supabase.from('resources').update(row).eq('id', form.id)
     if (error) {
       console.error('saveResource:update', error)
@@ -67,7 +68,7 @@ export async function saveResource(form: {
 export async function deleteResource(id: string) {
   const ctx = await assertAdminAction()
   if (!ctx.ok) return { ok: false as const, message: ctx.message }
-  if (!isValidUUID(id)) return { ok: false as const, message: 'ID inválido.' }
+  if (!uuidSchema.safeParse(id).success) return { ok: false as const, message: 'ID inválido.' }
 
   const { error } = await ctx.supabase.from('resources').delete().eq('id', id)
   if (error) {
