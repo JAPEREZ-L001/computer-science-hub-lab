@@ -261,19 +261,30 @@ export type CommunityIdeaAdminRow = {
   vote_count: number
   status: string
   pinned: boolean
+  category: string | null
+  impact: string | null
+  tags: string[]
+  execution_status: string
+  execution_notes: string | null
+  owner_id: string | null
+  owner_name: string | null
+  location: string | null
+  scheduled_at: string | null
   created_at: string
 }
 
 /**
- * El autor solo se resuelve por nombre, nunca por email: mismo criterio que
- * `resolveDisplayName` documenta para ideas en el resto del sitio (ver
- * `display-name.ts`), y acá no hace falta romperlo para moderar.
+ * Autor y responsable se resuelven solo por nombre, nunca por email: mismo
+ * criterio que `resolveDisplayName` documenta para ideas en el resto del sitio
+ * (ver `display-name.ts`), y acá no hace falta romperlo para moderar.
  */
 export async function adminListCommunityIdeas(): Promise<CommunityIdeaAdminRow[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('community_ideas')
-    .select('id, title, description, author_id, vote_count, status, pinned, created_at')
+    .select(
+      'id, title, description, author_id, vote_count, status, pinned, category, impact, tags, execution_status, execution_notes, owner_id, location, scheduled_at, created_at',
+    )
     .order('pinned', { ascending: false })
     .order('created_at', { ascending: false })
 
@@ -282,15 +293,21 @@ export async function adminListCommunityIdeas(): Promise<CommunityIdeaAdminRow[]
     return []
   }
 
-  const rows = (data ?? []) as Omit<CommunityIdeaAdminRow, 'author_name'>[]
-  const authorIds = [...new Set(rows.map((r) => r.author_id).filter((id): id is string => Boolean(id)))]
+  const rows = (data ?? []) as Omit<CommunityIdeaAdminRow, 'author_name' | 'owner_name'>[]
+  const personIds = [
+    ...new Set(
+      [...rows.map((r) => r.author_id), ...rows.map((r) => r.owner_id)].filter(
+        (id): id is string => Boolean(id),
+      ),
+    ),
+  ]
 
   const nameById = new Map<string, string | null>()
-  if (authorIds.length > 0) {
+  if (personIds.length > 0) {
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
       .select('id, full_name')
-      .in('id', authorIds)
+      .in('id', personIds)
 
     if (profilesError) console.error('adminListCommunityIdeas:profiles', profilesError)
     for (const p of profiles ?? []) nameById.set(p.id as string, p.full_name as string | null)
@@ -301,7 +318,38 @@ export async function adminListCommunityIdeas(): Promise<CommunityIdeaAdminRow[]
     author_name: r.author_id
       ? resolveDisplayName({ full_name: nameById.get(r.author_id) })
       : DISPLAY_NAME_FALLBACK,
+    owner_name: r.owner_id
+      ? resolveDisplayName({ full_name: nameById.get(r.owner_id) })
+      : null,
   }))
+}
+
+/**
+ * Miembros asignables como responsables de una idea. A diferencia de los
+ * mentores (que salen del directorio opt-in), cualquier miembro activo puede
+ * quedar a cargo de ejecutar una idea.
+ */
+export async function adminListAssignableMembers(): Promise<MentorCandidateRow[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, email')
+    .eq('status', 'activo')
+
+  if (error) {
+    console.error('adminListAssignableMembers', error)
+    return []
+  }
+
+  return (data ?? [])
+    .map((p) => ({
+      id: p.id as string,
+      name: resolveDisplayName({
+        full_name: p.full_name as string | null,
+        email: p.email as string | null,
+      }),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
 }
 
 export type TutoringRequestAdminRow = {
